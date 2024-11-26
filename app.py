@@ -9,7 +9,7 @@ import time
 load_dotenv()
 
 # Initialize the Anthropic client
-client = anthropic.Client(api_key=os.getenv('ANTHROPIC_API_KEY'))
+client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # Dictionary of categories considered unsafe for content moderation, with their definitions
 unsafe_category_definitions = {
@@ -58,16 +58,18 @@ Respond with ONLY a JSON object, using the format below:
 }}"""
 
     try:
-        # Send the request to Claude using the correct API syntax
-        response = client.complete(
-            prompt=assessment_prompt,
-            model="claude-2",
-            max_tokens_to_sample=1024,
-            temperature=0,
+        # Send the request to Claude using the latest API
+        message = client.beta.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=1024,
+            messages=[
+                {"role": "user", "content": assessment_prompt}
+            ]
         )
         
-        # Parse the JSON response from the completion
-        assessment = json.loads(response.completion)
+        # Parse the JSON response
+        response_text = message.content[0].text
+        assessment = json.loads(response_text)
         
         # Extract the results
         contains_violation = assessment.get('violation', False)
@@ -78,6 +80,7 @@ Respond with ONLY a JSON object, using the format below:
         
     except Exception as e:
         st.error(f"Error processing message: {str(e)}")
+        print(f"Detailed error: {str(e)}")  # Added for debugging
         return False, [], str(e)
 
 def main():
